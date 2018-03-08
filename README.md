@@ -17,7 +17,7 @@ coordination between shards or replicas.
 
 ## Contents
 
-This repository contains implementations of 4 distributed transaction protocols:
+This repository contains implementations of 5 distributed transaction protocols:
 
 1. Eris, including independent transaction processing, view change,
    epoch change, and general transaction processing protocols.
