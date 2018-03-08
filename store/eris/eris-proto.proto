@@ -1,0 +1,254 @@
+import "common/request.proto";
+
+package specpaxos.store.eris.proto;
+
+message ViewNum {
+    required uint32 view_num = 1;
+    required uint32 sess_num = 2;
+}
+
+message Stamp {
+    required uint32 shard_num = 1;
+    required uint64 msg_num = 2;
+    optional uint32 sess_num = 3;
+}
+
+message MultiStamp {
+    required uint32 sess_num = 1;
+    repeated Stamp stamps = 2;
+}
+
+enum RequestType {
+    UNKNOWN = 0;
+    INDEPENDENT = 1;
+    PREPARE = 2;
+    COMMIT = 3;
+    ABORT = 4;
+}
+
+message RequestMessage {
+    required uint64 txnid = 1;
+    required RequestType type = 2;
+    required Request request = 3;
+}
+
+message ReplyMessage {
+  required uint64 clientid = 1;
+  required uint64 clientreqid = 2;
+  required uint32 shard_num = 3;
+  required uint32 replica_num = 4;
+  required ViewNum view = 5;
+  required uint64 op_num = 6;
+  optional uint32 commit = 7;
+  optional bytes reply = 8;
+}
+
+message GapRequestMessage {
+    required ViewNum view = 1;
+    required uint64 op_num = 2;
+}
+
+message GapReplyMessage {
+    required ViewNum view = 1;
+    required uint64 op_num = 2;
+    required bool isfound = 4;
+    required bool isgap = 5;
+    required uint32 replica_num = 6;
+    optional RequestMessage req = 7;
+}
+
+message SyncPrepareMessage {
+    required ViewNum view = 1;
+}
+
+message ViewChangeRequestMessage {
+    required ViewNum view = 1;
+}
+
+message DropTxns {
+    repeated Stamp temp_drops = 1;
+    repeated Stamp perm_drops = 2;
+    repeated RequestMessage un_drops = 3;
+}
+
+message ViewChangeMessage {
+    required ViewNum view = 1;
+    required uint32 replica_num = 2;
+    required uint64 op_num = 3;
+    required DropTxns drops = 4;
+}
+
+message StartViewMessage {
+    required ViewNum view = 1;
+    required uint64 op_num = 2;
+    required DropTxns drops = 3;
+}
+
+message StateTransferRequestMessage {
+    required ViewNum view = 1;
+    required uint64 begin = 2;
+    required uint64 end = 3;
+}
+
+message StateTransferReplyMessage {
+    message MsgLogEntry {
+        required uint64 view = 1;
+        required uint64 op_num = 2;
+        required uint64 sess_num = 3;
+        required uint64 msg_num = 4;
+        required uint64 shard_num = 5;
+        required uint32 state = 6;
+        required RequestMessage request = 7;
+    }
+    required ViewNum view = 1;
+    required uint64 begin = 2;
+    required uint64 end = 3;
+    repeated MsgLogEntry entries = 4;
+}
+
+message EpochChangeStateTransferRequest {
+    required uint64 sess_num = 1;
+    required uint64 state_transfer_sess_num = 2;
+    required uint32 shard_num = 3;
+    required uint64 begin = 4;
+    required uint64 end = 5;
+}
+
+message EpochChangeStateTransferReply {
+    message MsgEntry {
+        required uint64 msg_num = 1;
+        required RequestMessage request = 2;
+    }
+    required uint64 sess_num = 1;
+    required uint64 state_transfer_sess_num = 2;
+    required uint32 shard_num = 3;
+    repeated MsgEntry entries = 4;
+}
+
+/*******************************************************************************
+ * Replica to Failure Coordinator Messages
+ ******************************************************************************/
+
+// Sent by a replica to check the status of a missing txn
+message TxnInfoRequest {
+  required Stamp txn_num = 1;
+}
+
+// Sent by the replica to indicate a txn was already processed
+message TxnReceived  {
+  required RequestMessage txn = 1;
+}
+
+// Sent by the replica to indicate that it has tentatively dropped a txn
+message TxnTempDropped {
+  required Stamp txn_num = 1;
+}
+
+// Sent by a replica when it detects the current epoch has terminated
+message EpochChangeReq {
+  required uint32 new_epoch_num = 1;
+}
+
+// Sent by a replica promising not to ever go back to lower epoch_num (and not
+// to do anything else until it receives the StartSession)
+// RULE: replicas only ever commit to a epoch once they have *begun* the
+// previous one
+message EpochChangeAck {
+  message LogInfoPiece {
+    required uint32 shard_num      = 1;
+    required uint64 latest_msg_num = 2;
+  }
+
+  required uint32 last_normal_epoch = 1;
+  required uint64 op_num = 2;
+  repeated LogInfoPiece log_info = 3;
+}
+
+message EpochChangeStateTransferAck {
+    required uint64 op_num = 1;
+    repeated Stamp drops = 2;
+}
+
+// message EpochChangeTxnLookupRep {
+//   required uint32 new_epoch_num = 1;
+//   repeated Txn    missing_txns  = 2;
+// }
+
+// Wrapper for all messages sent from replicas to FC
+message ErisToFCMessage {
+  // Should all match up with the provided YAML file
+  required uint32  shard_num       = 1;
+  required uint32  replica_num     = 2;
+  // Current view number of the replica/shard the message is sent from
+  required ViewNum local_view_num  = 3;
+
+  oneof msg {
+    TxnInfoRequest              txn_info_req                    = 4;
+    TxnReceived                 txn_received                    = 5;
+    TxnTempDropped              txn_temp_drop                   = 6;
+    EpochChangeReq              epoch_change_req                = 7;
+    EpochChangeAck              epoch_change_ack                = 8;
+    EpochChangeStateTransferAck epoch_change_state_transfer_ack = 9;
+  }
+}
+
+/*******************************************************************************
+ * Failure Coordinator to Replica Messages
+ ******************************************************************************/
+
+message TxnCheck {
+  required Stamp txn_num = 1;
+}
+
+// Sent by FC to indicate that the included txn is safe to be processed,
+// *even if* the replica previously committed to dropping it
+message TxnFound {
+  required RequestMessage txn = 1;
+}
+
+message DropTxn {
+  required Stamp txn_num = 1;
+}
+
+message EpochChange {
+  required uint32 new_epoch_num = 1;
+}
+
+// Sent to get missing transactions
+// message EpochChangeTxnLookup {
+//   required uint32          new_epoch_num = 1;
+//   repeated Txn.ShardTxnNum missing_txns    = 2;
+// }
+
+message EpochChangeStateTransfer {
+    message MsgEntry {
+        required uint32 shard_num = 1;
+        required uint32 replica_num = 2;
+        required uint64 msg_num = 3;
+    }
+    required uint32 epoch_num = 1;
+    required uint32 state_transfer_epoch_num = 2;
+    repeated Stamp perm_drops = 3;
+    repeated MsgEntry latest_msgs = 4;
+}
+
+message StartEpoch {
+  required ViewNum new_view = 1;
+  required uint64 last_normal_epoch_num = 2;
+  repeated Stamp perm_drops = 3;
+  required uint32 latest_replica_num = 4;
+  required uint64 latest_op_num  = 5;
+}
+
+// Wrapper for all messages sent from FC to replicas
+message FCToErisMessage {
+
+  oneof msg {
+    TxnCheck                    txn_check                   = 1;
+    TxnFound                    txn_found                   = 2;
+    DropTxn                     drop_txn                    = 3;
+    EpochChange                 epoch_change                = 4;
+    EpochChangeStateTransfer    epoch_change_state_transfer = 5;
+    StartEpoch                  start_epoch                 = 6;
+  }
+}

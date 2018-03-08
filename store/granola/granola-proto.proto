@@ -1,0 +1,65 @@
+import "common/request.proto";
+
+package specpaxos.store.granola.proto;
+
+enum Status {
+    COMMIT = 0;
+    ABORT = 1;
+    CONFLICT = 2;
+}
+
+message RequestMessage {
+    required uint64 txnid = 1;
+    required bool indep = 2;
+    required bool ro = 3;
+    required Request request = 4;
+}
+
+message ReplyMessage {
+  required uint64 clientreqid = 1;
+  required uint32 shard_num = 2;
+  required Status status = 3;
+  optional bytes reply = 4;
+}
+
+message PrepareMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+    required uint64 txnid = 3;
+    required bool indep = 4;
+    required bool ro = 5;
+    required Request request = 6;
+    required uint64 timestamp = 7;
+}
+
+message PrepareOKMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+    required uint32 replica_num = 3;
+}
+
+message CommitMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+}
+
+message VoteMessage {
+    required uint64 clientid = 1;
+    required uint64 clientreqid = 2;
+    required uint32 shard_num = 3;
+    required uint32 nshards = 4;
+    required Status status = 5;
+}
+
+message VoteRequestMessage {
+    required uint64 clientid = 1;
+    required uint64 clientreqid = 2;
+}
+
+message FinalTimestampMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+    required uint64 timestamp = 3;
+    required Status status = 4;
+}
+

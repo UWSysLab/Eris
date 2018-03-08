@@ -1,0 +1,29 @@
+package specpaxos.store.kvstore.proto;
+
+message GetMessage {
+  required string key = 1;
+}
+
+message GetReply {
+  required string key = 1;
+  required string value = 2;
+}
+
+message PutMessage {
+  required string key = 1;
+  required string value = 2;
+}
+
+message KVTxnMessage {
+  repeated GetMessage gets = 1;
+  repeated PutMessage puts = 2;
+}
+
+message KVTxnReplyMessage {
+    enum Status {
+        SUCCESS = 0;
+        FAILED = 1;
+    }
+    required Status status = 1;
+    repeated GetReply rgets = 2;
+}

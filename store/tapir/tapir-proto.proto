@@ -1,0 +1,71 @@
+import "common/request.proto";
+
+package specpaxos.store.tapir.proto;
+
+message TimestampMessage {
+    required uint64 id = 1;
+    required uint64 timestamp = 2;
+}
+
+message Transaction {
+    enum Operation {
+        UNKNOWN = 0;
+        PREPARE = 1;
+        COMMIT = 2;
+        ABORT = 3;
+    }
+    required uint64 txnid = 1;
+    required Operation op = 2;
+    required bytes txn = 3;
+}
+
+message ReplyMessage {
+    enum Status {
+        OK = 0;
+        FAILED = 1;
+        RETRY = 2;
+    }
+    required Status status = 1;
+    optional bytes reply = 2;
+}
+
+message OpID {
+    required uint64 clientid = 1;
+    required uint64 clientreqid = 2;
+}
+
+message ProposeInconsistentMessage {
+    required Request req = 1;
+}
+
+message ReplyInconsistentMessage {
+    required uint64 view = 1;
+    required uint32 replicaIdx = 2;
+    required OpID opid = 3;
+}
+
+message FinalizeInconsistentMessage {
+    required OpID opid = 1;
+}
+
+message ConfirmMessage {
+    required uint64 view = 1;
+    required uint32 replicaIdx = 2;
+    required OpID opid = 3;
+}
+
+message ProposeConsensusMessage {
+    required Request req = 1;
+}
+
+message ReplyConsensusMessage {
+    required uint64 view = 1;
+    required uint32 replicaIdx = 2;
+    required OpID opid = 3;
+    required bytes result = 4;
+}
+
+message FinalizeConsensusMessage {
+    required OpID opid = 1;
+    required bytes result = 2;
+}

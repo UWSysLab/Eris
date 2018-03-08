@@ -1,0 +1,49 @@
+import "common/request.proto";
+
+package specpaxos.store.spanner.proto;
+
+enum RequestType {
+    UNKNOWN = 0;
+    PREPARE = 1;
+    COMMIT = 2;
+    ABORT = 3;
+}
+
+message RequestMessage {
+    required uint64 txnid = 1;
+    required RequestType type = 2;
+    required Request request = 3;
+}
+
+enum ReplyType {
+    OK = 0;
+    FAIL = 1;
+    RETRY = 2;
+    ACK = 3;
+}
+
+message ReplyMessage {
+  required uint64 clientreqid = 1;
+  required uint32 shard_num = 2;
+  required ReplyType type = 3;
+  optional bytes reply = 4;
+}
+
+message PrepareMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+    required uint64 txnid = 3;
+    required RequestType type = 4;
+    required Request request = 5;
+}
+
+message PrepareOKMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+    required uint32 replica_num = 3;
+}
+
+message CommitMessage {
+    required uint64 view = 1;
+    required uint64 opnum = 2;
+}
